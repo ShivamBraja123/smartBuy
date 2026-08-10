@@ -1,38 +1,32 @@
-const AWS = require('aws-sdk');
-
-const keys = require('../config/keys');
+const fs = require('fs');
+const path = require('path');
 
 exports.s3Upload = async image => {
   try {
-    let imageUrl = '';
-    let imageKey = '';
-
-    if (!keys.aws.accessKeyId) {
-      console.warn('Missing aws keys');
+    if (!image) {
+      return { imageUrl: '', imageKey: '' };
     }
 
-    if (image) {
-      const s3bucket = new AWS.S3({
-        accessKeyId: keys.aws.accessKeyId,
-        secretAccessKey: keys.aws.secretAccessKey,
-        region: keys.aws.region
-      });
+    const uploadDir = path.join(__dirname, '../uploads');
 
-      const params = {
-        Bucket: keys.aws.bucketName,
-        Key: image.originalname,
-        Body: image.buffer,
-        ContentType: image.mimetype
-      };
-
-      const s3Upload = await s3bucket.upload(params).promise();
-
-      imageUrl = s3Upload.Location;
-      imageKey = s3Upload.key;
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    return { imageUrl, imageKey };
-  } catch (error) {
-    return { imageUrl: '', imageKey: '' };
+    const fileName = Date.now() + '-' + image.originalname;
+    const filePath = path.join(uploadDir, fileName);
+
+    fs.writeFileSync(filePath, image.buffer);
+
+    return {
+      imageUrl: `http://localhost:3000/uploads/${fileName}`,
+      imageKey: fileName
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      imageUrl: '',
+      imageKey: ''
+    };
   }
 };

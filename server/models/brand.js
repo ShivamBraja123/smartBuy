@@ -7,8 +7,8 @@ const options = {
   lang: 'en',
   truncate: 120
 };
-
 Mongoose.plugin(slug, options);
+
 
 // Brand Schema
 const BrandSchema = new Schema({

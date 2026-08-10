@@ -1,7 +1,7 @@
 {
-  "name": "mern-ecommerce",
+  "name": "smartbuy",
   "version": "1.0.0",
-  "description": "MERN Ecommerce",
+  "description": "smartbuy",
   "main": "server/index.js",
   "scripts": {
     "dev": "npm-run-all --parallel dev:*",

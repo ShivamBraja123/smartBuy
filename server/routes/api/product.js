@@ -90,7 +90,7 @@ router.get('/list', async (req, res) => {
       page = 1,
       limit = 10
     } = req.query;
-    sortOrder = JSON.parse(sortOrder);
+    sortOrder = sortOrder ? JSON.parse(sortOrder) : { created: -1 };
 
     const categoryFilter = category ? { category } : {};
     const basicQuery = getStoreProductsQuery(min, max, rating);
@@ -217,20 +217,41 @@ router.post(
         return res.status(400).json({ error: 'This sku is already in use.' });
       }
 
-      const { imageUrl, imageKey } = await s3Upload(image);
+      const fs = require('fs');
+const path = require('path');
 
-      const product = new Product({
-        sku,
-        name,
-        description,
-        quantity,
-        price,
-        taxable,
-        isActive,
-        brand,
-        imageUrl,
-        imageKey
-      });
+let imageUrl = '';
+let imageKey = '';
+
+if (image) {
+  const uploadDir = path.join(__dirname, '../../uploads/products');
+
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const fileName = Date.now() + '-' + image.originalname.replace(/\s+/g, '-');
+
+  fs.writeFileSync(
+    path.join(uploadDir, fileName),
+    image.buffer
+  );
+
+  imageUrl = `/uploads/products/${fileName}`;
+}
+
+const product = new Product({
+  sku,
+  name,
+  description,
+  quantity,
+  price,
+  taxable,
+  isActive,
+  brand,
+  imageUrl,
+  imageKey
+});
 
       const savedProduct = await product.save();
 
@@ -285,11 +306,12 @@ router.get(
       res.status(200).json({
         products
       });
-    } catch (error) {
-      res.status(400).json({
-        error: 'Your request could not be processed. Please try again.'
-      });
-    }
+   } catch (error) {
+  console.log('PRODUCT API ERROR:', error);
+  res.status(400).json({
+    error: error.message
+  });
+}
   }
 );
 

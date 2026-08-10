@@ -1,20 +1,20 @@
 const Mongoose = require('mongoose');
-
 exports.getStoreProductsQuery = (min, max, rating) => {
-  rating = Number(rating);
-  max = Number(max);
   min = Number(min);
-
-  const priceFilter = min && max ? { price: { $gte: min, $lte: max } } : {};
-  const ratingFilter = rating
-    ? { rating: { $gte: rating } }
-    : { rating: { $gte: rating } };
+  max = Number(max);
+  rating = Number(rating);
 
   const matchQuery = {
-    isActive: true,
-    price: priceFilter.price,
-    averageRating: ratingFilter.rating
+    isActive: true
   };
+
+  // Add price filter only when both values exist
+  if (!Number.isNaN(min) && !Number.isNaN(max) && min > 0 && max > 0) {
+    matchQuery.price = {
+      $gte: min,
+      $lte: max
+    };
+  }
 
   const basicQuery = [
     {
@@ -67,17 +67,24 @@ exports.getStoreProductsQuery = (min, max, rating) => {
           ]
         }
       }
-    },
-    {
-      $match: matchQuery
-    },
-    {
-      $project: {
-        brands: 0,
-        reviews: 0
-      }
     }
   ];
+
+  // Add rating filter only when user actually selected a rating
+  if (!Number.isNaN(rating) && rating > 0) {
+    basicQuery.push({
+      $match: {
+        averageRating: { $gte: rating }
+      }
+    });
+  }
+
+  basicQuery.push({
+    $project: {
+      brands: 0,
+      reviews: 0
+    }
+  });
 
   return basicQuery;
 };
