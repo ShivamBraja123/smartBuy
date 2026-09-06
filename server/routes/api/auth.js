@@ -19,33 +19,42 @@ const { secret, tokenLife } = keys.jwt;
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log(`[LOGIN ATTEMPT] Received email: "${email}", password provided: ${!!password}`);
 
     if (!email) {
+      console.log('[LOGIN ERROR] Missing email in request body');
       return res
         .status(400)
         .json({ error: 'You must enter an email address.' });
     }
 
     if (!password) {
+      console.log('[LOGIN ERROR] Missing password in request body');
       return res.status(400).json({ error: 'You must enter a password.' });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
+      console.log(`[LOGIN ERROR] User.findOne({ email: "${email}" }) returned NULL / Not Found in DB: "${User.db ? User.db.name : 'unknown'}"`);
       return res
         .status(400)
         .send({ error: 'No user found for this email address.' });
     }
 
+    console.log(`[LOGIN INFO] User found: ID=${user._id}, email="${user.email}", provider="${user.provider}", role="${user.role}"`);
+
     if (user && user.provider !== EMAIL_PROVIDER.Email) {
+      console.log(`[LOGIN ERROR] Provider mismatch: user.provider="${user.provider}" vs EXPECTED="${EMAIL_PROVIDER.Email}"`);
       return res.status(400).send({
         error: `That email address is already in use using ${user.provider} provider.`
       });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log(`[LOGIN INFO] bcrypt.compare result: ${isMatch}`);
 
     if (!isMatch) {
+      console.log('[LOGIN ERROR] Password comparison failed (bcrypt mismatch)');
       return res.status(400).json({
         success: false,
         error: 'Password Incorrect'
@@ -59,8 +68,10 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(payload, secret, { expiresIn: tokenLife });
 
     if (!token) {
-      throw new Error();
+      throw new Error('JWT Token signing failed');
     }
+
+    console.log(`[LOGIN SUCCESS] Login successful for user: "${user.email}" with role: "${user.role}"`);
 
     res.status(200).json({
       success: true,
@@ -74,6 +85,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('[LOGIN EXCEPTION]', error);
     res.status(400).json({
       error: 'Your request could not be processed. Please try again.'
     });
